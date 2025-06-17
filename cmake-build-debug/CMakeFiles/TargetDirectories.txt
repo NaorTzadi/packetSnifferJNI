@@ -1,0 +1,3 @@
+C:/Users/neors/CLionProjects/packetSnifferJNI/cmake-build-debug/CMakeFiles/packetSnifferJNI.dir
+C:/Users/neors/CLionProjects/packetSnifferJNI/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/neors/CLionProjects/packetSnifferJNI/cmake-build-debug/CMakeFiles/rebuild_cache.dir

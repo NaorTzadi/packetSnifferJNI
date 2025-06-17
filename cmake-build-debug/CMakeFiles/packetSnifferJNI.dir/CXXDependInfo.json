@@ -1,0 +1,22 @@
+{
+	"bmi-installation" : null,
+	"compiler-frontend-variant" : "GNU",
+	"compiler-id" : "GNU",
+	"compiler-simulate-id" : "",
+	"config" : "Debug",
+	"cxx-modules" : {},
+	"dir-cur-bld" : "C:/Users/neors/CLionProjects/packetSnifferJNI/cmake-build-debug",
+	"dir-cur-src" : "C:/Users/neors/CLionProjects/packetSnifferJNI",
+	"dir-top-bld" : "C:/Users/neors/CLionProjects/packetSnifferJNI/cmake-build-debug",
+	"dir-top-src" : "C:/Users/neors/CLionProjects/packetSnifferJNI",
+	"exports" : [],
+	"forward-modules-from-target-dirs" : [],
+	"include-dirs" : 
+	[
+		"C:\\Program Files\\Java\\jdk-17\\include",
+		"C:\\Program Files\\Java\\jdk-17\\include\\win32"
+	],
+	"language" : "CXX",
+	"linked-target-dirs" : [],
+	"module-dir" : "C:/Users/neors/CLionProjects/packetSnifferJNI/cmake-build-debug/CMakeFiles/packetSnifferJNI.dir"
+}
