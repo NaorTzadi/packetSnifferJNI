@@ -2,6 +2,9 @@
 
 // PacketPid WFP driver — start/stop + PID filtering
 // Build with WDK 10, link ndis.lib fwpkclnt.lib fwpuclnt.lib
+// PacketPid WFP driver — start/stop + PID filtering
+// Build with WDK 10, link ndis.lib fwpkclnt.lib fwpuclnt.lib
+
 #define _WIN32_WINNT 0x0A00
 #ifndef NTDDI_VERSION
 #define NTDDI_VERSION NTDDI_WIN10
@@ -159,18 +162,24 @@ static VOID DriverUnload(PDRIVER_OBJECT)
 /* entry */
 NTSTATUS NTAPI DriverEntry(PDRIVER_OBJECT drv, PUNICODE_STRING)
 {
+    DbgPrint("PacketPid: DriverEntry called\n");
     /* create device */
     NTSTATUS st;
     InitializeListHead(&gQueue); KeInitializeSpinLock(&gQueueLock); KeInitializeSpinLock(&gPidLock);
 
     UNICODE_STRING dn; RtlInitUnicodeString(&dn, DEVICE_NAME);
     st = IoCreateDevice(drv, 0, &dn, FILE_DEVICE_NETWORK, 0, FALSE, &gDevice); if (!NT_SUCCESS(st)) return st;
+    if (!NT_SUCCESS(st)) {
+        DbgPrint("PacketPid: IoCreateDevice failed (0x%08X)\n", st);
+        return st;
+    }
 
     UNICODE_STRING sl; RtlInitUnicodeString(&sl, SYMLINK_NAME); IoCreateSymbolicLink(&sl, &dn);
 
     drv->MajorFunction[IRP_MJ_DEVICE_CONTROL] = DeviceIo; drv->DriverUnload = DriverUnload;
 
     /* WFP */
+    DbgPrint("PacketPid: Registering WFP callout\n");
     GUID key = { 0xaabbccdd,0,0,{0,0,0,0,0,0,0,1} };
     FWPS_CALLOUT0  co = { 0 };
     FWPM_SESSION0  sess = { 0 };
@@ -179,23 +188,40 @@ NTSTATUS NTAPI DriverEntry(PDRIVER_OBJECT drv, PUNICODE_STRING)
     const GUID* layers[2] = { &FWPM_LAYER_OUTBOUND_TRANSPORT_V4,&FWPM_LAYER_OUTBOUND_TRANSPORT_V6 };
 
     co.calloutKey = key; co.classifyFn = ClassifyFn;
-    st = FwpsCalloutRegister0(gDevice, &co, &gCalloutId); if (!NT_SUCCESS(st)) goto fail;
+    st = FwpsCalloutRegister0(gDevice, &co, &gCalloutId);
+    if (!NT_SUCCESS(st)) {
+        DbgPrint("PacketPid: FwpsCalloutRegister0 failed (0x%08X)\n", st);
+        goto fail;
+    }
 
     sess.flags = FWPM_SESSION_FLAG_DYNAMIC;
-    st = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &sess, &gEngine); if (!NT_SUCCESS(st)) goto fail;
+    st = FwpmEngineOpen0(NULL, RPC_C_AUTHN_DEFAULT, NULL, &sess, &gEngine);
+    if (!NT_SUCCESS(st)) {
+        DbgPrint("PacketPid: FwpmEngineOpen0 failed (0x%08X)\n", st);
+        goto fail;
+    }
 
     mco.calloutKey = key; mco.displayData.name = L"PacketPidCallout";
     flt.displayData.name = L"PacketPidFilter"; flt.action.type = FWP_ACTION_CALLOUT_TERMINATING; flt.action.calloutKey = key; flt.weight.type = FWP_EMPTY;
 
     for (int i = 0; i < 2; i++) {
         mco.applicableLayer = *layers[i];
-        st = FwpmCalloutAdd0(gEngine, &mco, NULL, &gCalloutStore[gFilterCount]); if (!NT_SUCCESS(st)) goto fail;
+        st = FwpmCalloutAdd0(gEngine, &mco, NULL, &gCalloutStore[gFilterCount]);
+        if (!NT_SUCCESS(st)) {
+            DbgPrint("PacketPid: FwpmCalloutAdd0 failed on layer %d (0x%08X)\n", i, st);
+            goto fail;
+        }
 
         flt.layerKey = *layers[i];
-        st = FwpmFilterAdd0(gEngine, &flt, NULL, &gFilterIds[gFilterCount]);   if (!NT_SUCCESS(st)) goto fail;
-
+        st = FwpmFilterAdd0(gEngine, &flt, NULL, &gFilterIds[gFilterCount]);
+        if (!NT_SUCCESS(st)) {
+            DbgPrint("PacketPid: FwpmFilterAdd0 failed on layer %d (0x%08X)\n", i, st);
+            goto fail;
+        }
+        DbgPrint("PacketPid: WFP callout/filter added for layer %d\n", i);
         gFilterCount++;
     }
+    DbgPrint("PacketPid: Driver loaded successfully\n");
     return STATUS_SUCCESS;
 
 fail:
